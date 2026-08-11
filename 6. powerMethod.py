@@ -1,4 +1,4 @@
-def power_method(n, A, initialVector=[1.0], tol=0.000001, max_iter=1000):
+def power_method(n, A, initialVector, tol, max_iter):
 
     # Initial vector
     x = initialVector
