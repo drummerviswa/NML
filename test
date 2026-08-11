@@ -1,0 +1,231 @@
+from fractions import Fraction
+
+# --------------------------------------------------
+# Print Matrix
+# --------------------------------------------------
+def printMatrix(A):
+    for row in A:
+        print("[", end="")
+        for elem in row:
+            print(f"{float(elem):10.5f}", end=" ")
+        print("]")
+    print()
+
+
+# --------------------------------------------------
+# Gaussian Elimination
+# --------------------------------------------------
+def gauss_elimination(n, A, b):
+    TOL = 1e-10
+
+    # Forward Elimination
+    for k in range(n - 1):
+
+        if abs(A[k][k]) <= TOL:
+
+            max_row = k
+            max_value = abs(A[k][k])
+
+            for p in range(k + 1, n):
+                if abs(A[p][k]) > max_value:
+                    max_value = abs(A[p][k])
+                    max_row = p
+
+            if max_value <= TOL:
+                raise ValueError("No unique solution exists.")
+
+            A[k], A[max_row] = A[max_row], A[k]
+            b[k], b[max_row] = b[max_row], b[k]
+
+        print(f"\nPivot Step {k+1}")
+
+        for i in range(k + 1, n):
+
+            factor = A[i][k] / A[k][k]
+
+            for j in range(k + 1, n):
+                A[i][j] = A[i][j] - factor * A[k][j]
+
+            A[i][k] = 0
+            b[i] = b[i] - factor * b[k]
+
+            print(f"Row {i+1} <- Row {i+1} - ({factor:.5f}) Row {k+1}")
+            printMatrix(A)
+
+    # Back Substitution
+    x = [0] * n
+
+    x[n - 1] = b[n - 1] / A[n - 1][n - 1]
+
+    for k in range(n - 2, -1, -1):
+
+        s = 0
+
+        for j in range(k + 1, n):
+            s += A[k][j] * x[j]
+
+        x[k] = (b[k] - s) / A[k][k]
+
+    return x
+
+
+# ==================================================
+# MAIN PROGRAM
+# ==================================================
+
+print("Polynomial Least Squares Regression")
+print("-----------------------------------")
+
+n = int(input("Enter number of data points: "))
+degree = int(input("Enter polynomial degree: "))
+
+if degree >= n:
+    print("\nDegree must be less than number of data points.")
+    exit()
+
+x = []
+y = []
+
+print("\nEnter x and y values")
+
+for i in range(n):
+    xi = float(input(f"x[{i+1}] = "))
+    yi = float(input(f"y[{i+1}] = "))
+    x.append(xi)
+    y.append(yi)
+
+# --------------------------------------------------
+# Construct Design Matrix A
+# --------------------------------------------------
+
+m = degree + 1
+
+A = []
+
+for i in range(n):
+
+    row = []
+
+    for j in range(m):
+        row.append(x[i] ** j)
+
+    A.append(row)
+
+print("\nDesign Matrix A")
+printMatrix(A)
+
+# --------------------------------------------------
+# Compute AᵀA
+# --------------------------------------------------
+
+ATA = [[0 for _ in range(m)] for _ in range(m)]
+
+for i in range(m):
+    for j in range(m):
+
+        s = 0
+
+        for k in range(n):
+            s += A[k][i] * A[k][j]
+
+        ATA[i][j] = s
+
+print("Matrix AᵀA")
+printMatrix(ATA)
+
+# --------------------------------------------------
+# Compute Aᵀy
+# --------------------------------------------------
+
+ATy = [0 for _ in range(m)]
+
+for i in range(m):
+
+    s = 0
+
+    for k in range(n):
+        s += A[k][i] * y[k]
+
+    ATy[i] = s
+
+print("Vector Aᵀy")
+
+for value in ATy:
+    print(f"{value:.5f}")
+
+print()
+
+# --------------------------------------------------
+# Solve
+# --------------------------------------------------
+
+ATA_copy = [row[:] for row in ATA]
+ATy_copy = ATy[:]
+
+coeff = gauss_elimination(m, ATA_copy, ATy_copy)
+
+# --------------------------------------------------
+# Results
+# --------------------------------------------------
+
+print("\nPolynomial Coefficients")
+
+for i in range(m):
+    print(f"c{i} = {coeff[i]:.8f}")
+
+print("\nBest Fit Polynomial")
+
+equation = "y = "
+
+for i in range(m):
+
+    if i == 0:
+        equation += f"{coeff[i]:.6f}"
+
+    elif i == 1:
+        if coeff[i] >= 0:
+            equation += f" + {coeff[i]:.6f}x"
+        else:
+            equation += f" - {abs(coeff[i]):.6f}x"
+
+    else:
+        if coeff[i] >= 0:
+            equation += f" + {coeff[i]:.6f}x^{i}"
+        else:
+            equation += f" - {abs(coeff[i]):.6f}x^{i}"
+
+print(equation)
+
+# --------------------------------------------------
+# Predicted Values
+# --------------------------------------------------
+
+print("\nPredicted Values")
+
+print(" x\tObserved\tPredicted")
+
+for i in range(n):
+
+    yhat = 0
+
+    for j in range(m):
+        yhat += coeff[j] * (x[i] ** j)
+
+    print(f"{x[i]:.2f}\t{y[i]:.5f}\t\t{yhat:.5f}")
+
+# --------------------------------------------------
+# Sum of Squared Errors
+# --------------------------------------------------
+
+SSE = 0
+
+for i in range(n):
+
+    yhat = 0
+
+    for j in range(m):
+        yhat += coeff[j] * (x[i] ** j)
+
+    SSE += (y[i] - yhat) ** 2
+
+print("\nSum of Squared Errors (SSE) =", SSE)

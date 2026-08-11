@@ -1,0 +1,187 @@
+
+import numpy as np
+ 
+# -------------------------------
+# INPUT
+# -------------------------------
+ 
+print("Enter the seven resistor values (R1 R2 R3 R4 R5 R6 R7):")
+R1, R2, R3, R4, R5, R6, R7 = map(float, input().split())
+ 
+V1 = float(input("Enter Source Voltage (V1): "))
+V6 = 0.0
+ 
+# -------------------------------
+# COEFFICIENT MATRIX
+# -------------------------------
+ 
+A = np.array([
+    [1/R1 + 1/R2 + 1/R3,      -1/R2,             -1/R3,              0],
+    [-1/R2,                   1/R2 + 1/R4 + 1/R5, -1/R4,            -1/R5],
+    [-1/R3,                  -1/R4,              1/R3 + 1/R4 + 1/R6, -1/R6],
+    [0,                      -1/R5,             -1/R6,              1/R5 + 1/R6 + 1/R7]
+], dtype=float)
+ 
+B = np.array([
+    V1/R1,
+    0,
+    0,
+    V6/R7
+], dtype=float)
+ 
+# -------------------------------
+# GAUSS ELIMINATION WITH PIVOTING
+# -------------------------------
+ 
+def gauss_elimination(A, B):
+ 
+    A = A.copy()
+    B = B.copy()
+ 
+    n = len(B)
+ 
+    for i in range(n):
+ 
+        max_row = np.argmax(np.abs(A[i:, i])) + i
+ 
+        if max_row != i:
+            A[[i, max_row]] = A[[max_row, i]]
+            B[[i, max_row]] = B[[max_row, i]]
+ 
+        for j in range(i + 1, n):
+ 
+            factor = A[j][i] / A[i][i]
+ 
+            A[j] = A[j] - factor * A[i]
+            B[j] = B[j] - factor * B[i]
+ 
+    X = np.zeros(n)
+ 
+    for i in range(n - 1, -1, -1):
+ 
+        X[i] = (B[i] - np.dot(A[i][i+1:], X[i+1:])) / A[i][i]
+ 
+    return X
+ 
+# -------------------------------
+# GAUSS JACOBI
+# -------------------------------
+ 
+def gauss_jacobi(A, B, tol=1e-6, max_iter=100000):
+ 
+    n = len(B)
+ 
+    X = np.zeros(n)
+ 
+    for k in range(max_iter):
+ 
+        X_new = np.zeros(n)
+ 
+        for i in range(n):
+ 
+            s = np.dot(A[i], X) - A[i][i] * X[i]
+ 
+            X_new[i] = (B[i] - s) / A[i][i]
+ 
+        error = np.linalg.norm(X_new - X, np.inf)
+ 
+        if error < tol:
+            print("\nGauss-Jacobi converged in", k+1, "iterations")
+            return X_new
+ 
+        X = X_new.copy()
+ 
+    print("\nGauss-Jacobi did NOT converge after", max_iter, "iterations.")
+    return X
+ 
+# -------------------------------
+# GAUSS SEIDEL
+# -------------------------------
+ 
+def gauss_seidel(A, B, tol=1e-6, max_iter=1000):
+ 
+    n = len(B)
+ 
+    X = np.zeros(n)
+ 
+    for k in range(max_iter):
+ 
+        X_old = X.copy()
+ 
+        for i in range(n):
+ 
+            s1 = np.dot(A[i][:i], X[:i])
+ 
+            s2 = np.dot(A[i][i+1:], X_old[i+1:])
+ 
+            X[i] = (B[i] - s1 - s2) / A[i][i]
+ 
+        error = np.linalg.norm(X - X_old, np.inf)
+ 
+        if error < tol:
+            print("\nGauss-Seidel converged in", k+1, "iterations")
+            return X
+ 
+    print("\nGauss-Seidel did NOT converge after", max_iter, "iterations.")
+    return X
+ 
+# -------------------------------
+# CURRENT CALCULATIONS
+# -------------------------------
+ 
+def currents(V):
+ 
+    V2, V3, V4, V5 = V
+ 
+    return [
+        (V1 - V2)/R1,
+        (V2 - V3)/R2,
+        (V2 - V4)/R3,
+        (V3 - V4)/R4,
+        (V3 - V5)/R5,
+        (V4 - V5)/R6,
+        (V5 - V6)/R7
+    ]
+ 
+# -------------------------------
+# DISPLAY FUNCTION
+# -------------------------------
+ 
+def display(name, V):
+ 
+    print("\n====================================")
+    print(name)
+    print("====================================")
+ 
+    print(f"V2 = {V[0]:.6f}")
+    print(f"V3 = {V[1]:.6f}")
+    print(f"V4 = {V[2]:.6f}")
+    print(f"V5 = {V[3]:.6f}")
+ 
+    I = currents(V)
+ 
+    print("\nCurrents")
+ 
+    print(f"I12 = {I[0]:.6f} A")
+    print(f"I23 = {I[1]:.6f} A")
+    print(f"I24 = {I[2]:.6f} A")
+    print(f"I34 = {I[3]:.6f} A")
+    print(f"I35 = {I[4]:.6f} A")
+    print(f"I45 = {I[5]:.6f} A")
+    print(f"I56 = {I[6]:.6f} A")
+ 
+# -------------------------------
+# SOLVE
+# -------------------------------
+ 
+V_gauss = gauss_elimination(A, B)
+V_jacobi = gauss_jacobi(A, B)
+V_seidel = gauss_seidel(A, B)
+ 
+# -------------------------------
+# OUTPUT
+# -------------------------------
+ 
+display("Gauss Elimination with Partial Pivoting", V_gauss)
+display("Gauss-Jacobi Method", V_jacobi)
+display("Gauss-Seidel Method", V_seidel)
